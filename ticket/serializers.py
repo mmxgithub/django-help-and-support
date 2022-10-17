@@ -1,9 +1,6 @@
-from statistics import mode
 from rest_framework import serializers
-from django.contrib.auth.models import User
-from django.contrib.auth.password_validation import validate_password
 from .models import Ticket, SystemUser, Client, Staff, TicketCategory, TicketComment, TicketHardware, TicketSoftware
-
+from django.contrib.auth.models import Group
 
 class TicketCategorySerializer(serializers.ModelSerializer):
     class Meta:
@@ -37,8 +34,8 @@ class TicketSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Ticket
-        fields = ('company', 'project', 'title', 'category', 'description', 'contact_number',
-                  'contact_email', 'status', 'assignee', 'created_by', 'updated_by', 'created_dt', 'updated_dt', 'comment')
+        fields = ('company', 'project', 'software', 'title', 'category', 'description', 'contact_number',
+                  'contact_email', 'status', 'assignee', 'source', 'created_by', 'updated_by', 'created_dt', 'updated_dt', 'comment')
         read_only_fields = ('created_by', 'updated_by', 'created_dt', 'updated_dt')
 
     def get_comment(self, obj):
@@ -72,6 +69,7 @@ class ClientSerializer(serializers.ModelSerializer):
         system_user_obj = SystemUser.objects.create_user(
             is_staff=False, **system_user)
         client = Client.objects.create(user=system_user_obj)
+        add_to_group(system_user_obj, 'Client')
         return client
 
     def update(self, instance, validated_data):
@@ -95,6 +93,10 @@ class StaffSerializer(serializers.ModelSerializer):
             is_staff=True, **system_user)
         staff = Staff.objects.create(
             user=system_user_obj, is_admin=validated_data['is_admin'])
+        if validated_data['is_admin']:
+            add_to_group(system_user_obj, 'Admin')
+        else:
+            add_to_group(system_user_obj, 'Staff')
         return staff
 
     def update(self, instance, validated_data):
@@ -103,3 +105,7 @@ class StaffSerializer(serializers.ModelSerializer):
             super().update(instance.user, user_data)
         super().update(instance, validated_data)
         return instance
+
+def add_to_group(user, group_name):
+    group = Group.objects.get(name=group_name)
+    user.groups.add(group)

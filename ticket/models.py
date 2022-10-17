@@ -23,13 +23,30 @@ class TicketStatus(models.TextChoices):
     IN_PROGRESS = 'In Progress'
     DONE = 'Done'
 
+class TicketSource(models.TextChoices):
+    WEBSITE = 'Website'
+    LINEBOT = 'Line bot'
+    PHONECALL = 'Phone call'
+    EMAIL = 'Email'
+
 class TicketCategory(models.Model):
     name = models.CharField(max_length = 50)
 
+    def __str__(self):
+        return  self.name
+
+class Software(models.Model):
+    name = models.CharField(max_length = 50)
+    version = models.CharField(max_length = 20)
+
+    def __str__(self):
+        return  self.name + ' ' + self.version
+        
 class Ticket(models.Model):
 
     company = models.CharField(max_length = 100)
     project = models.CharField(max_length = 100)
+    software = models.ForeignKey(Software, null=True, on_delete=models.SET_NULL)
     title = models.CharField(max_length = 100)
     category = models.ForeignKey(TicketCategory, on_delete=models.CASCADE)
     description = models.TextField(max_length = 1000, null=True)
@@ -37,16 +54,23 @@ class Ticket(models.Model):
     contact_email = models.CharField(max_length = 50)
     status = models.CharField(choices=TicketStatus.choices, default=TicketStatus.REQUESTED, max_length = 20)
     assignee = models.ForeignKey(Staff, null=True, on_delete=models.SET_NULL)
+    source = models.CharField(choices=TicketSource.choices, default=TicketSource.PHONECALL, max_length = 20)
     created_by = models.ForeignKey(Client, null=True, on_delete=models.SET_NULL)
     updated_by = models.CharField(max_length = 200)
     created_dt = models.DateTimeField(auto_now_add=True)
     updated_dt = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return  self.title
 
 class TicketComment(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
     content = models.TextField(max_length = 1000)
     created_by = models.ForeignKey(SystemUser, null=True, on_delete=models.SET_NULL)
     created_dt = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return  self.ticket.title + ' #' + str(self.id)
 
 class TicketSoftware(models.Model):
     ticket = models.ForeignKey(Ticket, on_delete=models.CASCADE)
